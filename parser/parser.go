@@ -30,7 +30,7 @@ func Parse(path string) (result EnvMap, err error) {
 		}
 	}
 	if scErr := scanner.Err(); scErr != nil {
-		return nil, fmt.Errorf("parse: %w", scErr)
+		return nil, fmt.Errorf("parse %s: %w", path, scErr)
 	}
 	return result, nil
 }
