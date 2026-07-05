@@ -8,11 +8,11 @@ import (
 )
 
 type ReportInput struct {
-	Result      checker.CheckResult
-	ExamplePath string
-	EnvPath     string
-	ExampleKeys int
-	EnvKeys     int
+	Result         checker.CheckResult
+	ExamplePath    string
+	EnvPath        string
+	ExampleKeysLen int
+	EnvKeysLen     int
 }
 
 func categorize(issues []checker.Issue) (missing, extra, empty []string) {
@@ -38,9 +38,9 @@ func Report(in ReportInput, w io.Writer) {
 	fmt.Fprintf(w,
 		"Comparing:\n\texample\t: %s (%d keys)\n\tenv\t: %s (%d keys)\n",
 		in.ExamplePath,
-		in.ExampleKeys,
+		in.ExampleKeysLen,
 		in.EnvPath,
-		in.EnvKeys,
+		in.EnvKeysLen,
 	)
 
 	missing, extra, empty := categorize(in.Result.Issues)
