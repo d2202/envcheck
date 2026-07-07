@@ -23,6 +23,11 @@ envcheck --example .env.example --env .env --quiet
 envcheck --example .env.example --env .env --strict
 ```
 
+JSON - форматирование:
+```bash
+envcheck --example .env.example --env .env --json
+```
+
 ## Exit codes
 0 - Успех - в сравниваемом файле нет отсутствующих ключей
 1 - Провал - в сравниваемом файле найдены остутствующие ключи
@@ -40,6 +45,12 @@ SOMEKEY
 ❌      MISSING (1)     — keys in example, not in env
 KEY
 Result: 1 missing keys.
+```
+
+```bash
+$ ./envcheck --env .env --example .env.example --json
+
+{"missing":null,"extra":["SOMEKEY"],"empty":["SOMEEMPTYKEY"],"ok":false}
 ```
 
 ## Тестирование

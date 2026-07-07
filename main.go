@@ -37,6 +37,7 @@ func main() {
 	examplePath := flag.String("example", ".env.example", "path to .env.example file")
 	quiet := flag.Bool("quiet", false, "only exit code, no output")
 	strict := flag.Bool("strict", false, "only missing keys count as errors")
+	writeJSON := flag.Bool("json", false, "format result in JSON")
 
 	flag.Parse()
 
@@ -44,14 +45,23 @@ func main() {
 	envKeys := mustParse(*envPath)
 
 	checkRes := checker.Check(exampleKeys, envKeys)
+	input := reporter.ReportInput{
+		Result:         checkRes,
+		ExamplePath:    *examplePath,
+		EnvPath:        *envPath,
+		ExampleKeysLen: len(exampleKeys),
+		EnvKeysLen:     len(envKeys),
+	}
 	if !*quiet {
-		reporter.Report(reporter.ReportInput{
-			Result:         checkRes,
-			ExamplePath:    *examplePath,
-			EnvPath:        *envPath,
-			ExampleKeysLen: len(exampleKeys),
-			EnvKeysLen:     len(envKeys),
-		}, os.Stdout)
+		if *writeJSON {
+			err := reporter.ReportJSON(input, os.Stdout)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "envcheck: failed to write JSON output\n")
+				os.Exit(1)
+			}
+		} else {
+			reporter.Report(input, os.Stdout)
+		}
 	}
 	os.Exit(exitCode(checkRes, *strict))
 }

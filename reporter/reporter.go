@@ -1,6 +1,7 @@
 package reporter
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 
@@ -15,18 +16,11 @@ type ReportInput struct {
 	EnvKeysLen     int
 }
 
-func categorize(issues []checker.Issue) (missing, extra, empty []string) {
-	for _, issue := range issues {
-		switch issue.Kind {
-		case checker.Missing:
-			missing = append(missing, issue.Key)
-		case checker.Extra:
-			extra = append(extra, issue.Key)
-		case checker.Empty:
-			empty = append(empty, issue.Key)
-		}
-	}
-	return
+type JSONReport struct {
+	Missing []string `json:"missing"`
+	Extra   []string `json:"extra"`
+	Empty   []string `json:"empty"`
+	OK      bool     `json:"ok"`
 }
 
 func Report(in ReportInput, w io.Writer) {
@@ -73,4 +67,29 @@ func Report(in ReportInput, w io.Writer) {
 	case len(extra) != 0:
 		fmt.Fprintf(w, "Result: %d extra keys.\n", len(extra))
 	}
+}
+
+func ReportJSON(in ReportInput, w io.Writer) error {
+	missing, extra, empty := categorize(in.Result.Issues)
+	report := JSONReport{
+		Missing: missing,
+		Extra:   extra,
+		Empty:   empty,
+		OK:      len(in.Result.Issues) == 0,
+	}
+	return json.NewEncoder(w).Encode(report)
+}
+
+func categorize(issues []checker.Issue) (missing, extra, empty []string) {
+	for _, issue := range issues {
+		switch issue.Kind {
+		case checker.Missing:
+			missing = append(missing, issue.Key)
+		case checker.Extra:
+			extra = append(extra, issue.Key)
+		case checker.Empty:
+			empty = append(empty, issue.Key)
+		}
+	}
+	return
 }
