@@ -9,59 +9,59 @@ import (
 	"testing"
 )
 
-func TestParseLine(t *testing.T) {
+func TestParse_FileExtensions(t *testing.T) {
 	var tests = []struct {
-		name               string
-		in                 string
-		wantKey, wantValue string
-		ok                 bool
+		name    string
+		ext     string
+		format  Format
+		content string
+		want    EnvMap
 	}{
-		{"basic success", "key=value", "key", "value", true},
-		{"value with embedded equals", "KEY=postgres://user:pass@host?sslmode=require", "KEY", "postgres://user:pass@host?sslmode=require", true},
-		{"blank line + comment", "# comment", "", "", false},
-		{"blank line + comment w/ indent", " # comment with indent", "", "", false},
-		{"blank line", "", "", "", false},
-		{"blank line w/ space", " ", "", "", false},
-		{"inline comment", "somekey=val # this is a comment", "somekey", "val", true},
-		{"export prefix", "export EXPORTKEY=exportvalue", "EXPORTKEY", "exportvalue", true},
-		{"quotted value w/ spaces", "quotted=\"value with spaces\"", "quotted", "value with spaces", true},
-		{"quotted value #2 w/ spaces", "quottedone='value with spaces'", "quottedone", "value with spaces", true},
-		{"symbol in value", "testkey=value#value", "testkey", "value#value", true},
-		{"one quote", "KEY=\"value", "KEY", "\"value", true},
-		{"only key blank value", "KEY=", "KEY", "", true},
-		{"random string", "asdwdasd", "", "", false},
+		{
+			"env",
+			".env",
+			Env,
+			"KEY1=value1\nKEY2=value2\n",
+			EnvMap{"KEY1": "value1", "KEY2": "value2"},
+		},
+		{
+			"toml",
+			".toml",
+			Toml,
+			"[database]\nhost = \"localhost\"\nport = 5432",
+			EnvMap{"database.host": "localhost", "database.port": "5432"},
+		},
+		{
+			"yaml",
+			".yaml",
+			Yaml,
+			"database:\n  host: localhost\n  port: 5432",
+			EnvMap{"database.host": "localhost", "database.port": "5432"},
+		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			k, v, ok := parseLine(tt.in)
-			if k != tt.wantKey || v != tt.wantValue || ok != tt.ok {
-				t.Errorf("parseLine(%q) = (%q, %q, %t), want (%q, %q, %t)",
-					tt.in, k, v, ok, tt.wantKey, tt.wantValue, tt.ok)
+			dir := t.TempDir()
+			path := filepath.Join(dir, tt.ext)
+			if err := os.WriteFile(path, []byte(tt.content), 0644); err != nil {
+				t.Fatal(err)
+			}
+
+			result, err := Parse(path, tt.format)
+			if err != nil {
+				t.Errorf("want err == nil, got: %v", err)
+			}
+			if !maps.Equal(tt.want, result) {
+				t.Errorf("want: %q, got: %q", tt.want, result)
 			}
 		})
 	}
 }
 
 func TestParse(t *testing.T) {
-	t.Run("happy path", func(t *testing.T) {
-		dir := t.TempDir()
-		path := filepath.Join(dir, ".env")
-		content := "KEY1=value1\nKEY2=value2\n"
-		if err := os.WriteFile(path, []byte(content), 0644); err != nil {
-			t.Fatal(err)
-		}
-
-		result, err := Parse(path)
-		if err != nil {
-			t.Errorf("want err == nil, got: %v", err)
-		}
-		want := EnvMap{"KEY1": "value1", "KEY2": "value2"}
-		if !maps.Equal(want, result) {
-			t.Errorf("want: %q, got: %q", want, result)
-		}
-	})
 	t.Run("file not found", func(t *testing.T) {
-		result, err := Parse("path/to/file/.env")
+		result, err := Parse("path/to/file/.env", Env)
 		if err == nil {
 			t.Error("want err != nil, got nil")
 		}
@@ -76,9 +76,19 @@ func TestParse(t *testing.T) {
 		longLine := "KEY=" + strings.Repeat("x", bufio.MaxScanTokenSize+1)
 		os.WriteFile(path, []byte(longLine), 0644)
 
-		_, err := Parse(path)
+		_, err := Parse(path, Env)
 		if err == nil {
 			t.Error("want err != nil")
+		}
+	})
+
+	t.Run("unsupported file format", func(t *testing.T) {
+		result, err := Parse("path/to/file/.conf", Format("conf"))
+		if err == nil {
+			t.Error("want err != nil, got nil")
+		}
+		if result != nil {
+			t.Errorf("want result == nil, got %v", result)
 		}
 	})
 }

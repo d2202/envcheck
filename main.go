@@ -23,8 +23,8 @@ func exitCode(result checker.CheckResult, strict bool) int {
 	return code
 }
 
-func mustParse(path string) parser.EnvMap {
-	keys, err := parser.Parse(path)
+func mustParse(path, format string) parser.EnvMap {
+	keys, err := parser.Parse(path, parser.Format(format))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "envcheck: %v\n", err)
 		os.Exit(1)
@@ -33,16 +33,17 @@ func mustParse(path string) parser.EnvMap {
 }
 
 func main() {
-	envPath := flag.String("env", ".env", "path to .env file")
-	examplePath := flag.String("example", ".env.example", "path to .env.example file")
+	envPath := flag.String("actual", ".env", "path to actual file")
+	examplePath := flag.String("expected", ".env.example", "path to expected (.example) file")
 	quiet := flag.Bool("quiet", false, "only exit code, no output")
 	strict := flag.Bool("strict", false, "only missing keys count as errors")
 	writeJSON := flag.Bool("json", false, "format result in JSON")
+	format := flag.String("format", "env", "compare files format")
 
 	flag.Parse()
 
-	exampleKeys := mustParse(*examplePath)
-	envKeys := mustParse(*envPath)
+	exampleKeys := mustParse(*examplePath, *format)
+	envKeys := mustParse(*envPath, *format)
 
 	checkRes := checker.Check(exampleKeys, envKeys)
 	input := reporter.ReportInput{

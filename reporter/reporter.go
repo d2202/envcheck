@@ -39,7 +39,7 @@ func Report(in ReportInput, w io.Writer) {
 
 	missing, extra, empty := categorize(in.Result.Issues)
 	if len(extra) != 0 {
-		fmt.Fprintf(w, "⚠️\tEXTRA (%d)\t— keys in env, not in example\n", len(extra))
+		fmt.Fprintf(w, "⚠️\tEXTRA (%d)\t— keys in ACTUAL, not in EXPECTED\n", len(extra))
 		for _, v := range extra {
 			fmt.Fprintln(w, v)
 		}
@@ -53,7 +53,7 @@ func Report(in ReportInput, w io.Writer) {
 	}
 
 	if len(missing) != 0 {
-		fmt.Fprintf(w, "❌\tMISSING (%d)\t— keys in example, not in env\n", len(missing))
+		fmt.Fprintf(w, "❌\tMISSING (%d)\t— keys in EXPECTED, not in ACTUAL\n", len(missing))
 		for _, v := range missing {
 			fmt.Fprintln(w, v)
 		}
@@ -81,6 +81,9 @@ func ReportJSON(in ReportInput, w io.Writer) error {
 }
 
 func categorize(issues []checker.Issue) (missing, extra, empty []string) {
+	missing = []string{}
+	extra = []string{}
+	empty = []string{}
 	for _, issue := range issues {
 		switch issue.Kind {
 		case checker.Missing:
